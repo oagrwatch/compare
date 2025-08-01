@@ -6,13 +6,13 @@ import io
 
 # Ρυθμίσεις Streamlit
 st.title("Σύγκριση Ειδησεογραφικών Άρθρων")
-st.write("Ανεβάστε τα αρχεία Excel από τα sites ellada24.gr, amna.gr και thema.gr για να συγκρίνετε τους τίτλους.")
+st.write("Ανεβάστε το αρχείο Excel από το ellada24.gr και τουλάχιστον ένα από τα amna.gr ή thema.gr για να συγκρίνετε τους τίτλους.")
 
 # Upload αρχείων
 st.subheader("Μεταφόρτωση Αρχείων")
-ellada_file = st.file_uploader("ellada24_news_articles.xlsx", type=["xlsx"])
-amna_file = st.file_uploader("amna_articles.xlsx", type=["xlsx"])
-thema_file = st.file_uploader("protothema_articles.xlsx", type=["xlsx"])
+ellada_file = st.file_uploader("ellada24_news_articles.xlsx (υποχρεωτικό)", type=["xlsx"])
+amna_file = st.file_uploader("amna_articles.xlsx (προαιρετικό)", type=["xlsx"])
+thema_file = st.file_uploader("protothema_articles.xlsx (προαιρετικό)", type=["xlsx"])
 
 # Ρυθμίσεις παραμέτρων
 st.subheader("Ρυθμίσεις Σύγκρισης")
@@ -32,9 +32,7 @@ def load_data(file, file_name):
             df['norm_title'] = df['Title'].apply(normalize_text)
             df['Date'] = pd.to_datetime(df['Date'], format='%d/%m/%Y', errors='coerce')
             return df
-        else:
-            st.warning(f"Παρακαλώ ανεβάστε το αρχείο {file_name}.")
-            return None
+        return None
     except Exception as e:
         st.error(f"Σφάλμα κατά τη φόρτωση του {file_name}: {e}")
         return None
@@ -72,14 +70,14 @@ def compare_titles(df1, df2, site1_name, site2_name, date_start, date_end, date_
                     f'{site2_name}_Title': row2['Title'],
                     f'{site2_name}_Date': row2['Date'],
                     'Similarity': round(score, 2),
-                    'Date_Diff_Days': (date1 - row2['Date']).days
+                    'Date_Diff_Days': abs((date1 - row2['Date']).days)
                 })
     
     return results
 
 # Εκτέλεση σύγκρισης όταν πατηθεί το κουμπί
 if st.button("Εκτέλεση Σύγκρισης"):
-    if ellada_file and (amna_file or thema_file):
+    if ellada_file and (amna_file or thema_file):  # Απαιτείται ellada_file και τουλάχιστον ένα από τα άλλα δύο
         # Φόρτωση δεδομένων
         dfs = {
             'ellada24': load_data(ellada_file, 'ellada24_news_articles.xlsx'),
@@ -87,8 +85,11 @@ if st.button("Εκτέλεση Σύγκρισης"):
             'thema': load_data(thema_file, 'protothema_articles.xlsx')
         }
         
-        if any(df is None for df in dfs.values() if df is not False):
-            st.error("Η εκτέλεση σταμάτησε λόγω σφαλμάτων φόρτωσης.")
+        # Έλεγχος αν το ellada24 φορτώθηκε σωστά
+        if dfs['ellada24'] is None:
+            st.error("Η εκτέλεση σταμάτησε: Το αρχείο ellada24_news_articles.xlsx δεν φορτώθηκε σωστά.")
+        elif dfs['amna'] is None and dfs['thema'] is None:
+            st.error("Παρακαλώ ανεβάστε τουλάχιστον ένα από τα amna_articles.xlsx ή protothema_articles.xlsx.")
         else:
             comparisons = []
             if dfs['amna'] is not None:
@@ -133,4 +134,4 @@ if st.button("Εκτέλεση Σύγκρισης"):
             else:
                 st.warning("Δεν βρέθηκαν παρόμοια άρθρα με τις τρέχουσες ρυθμίσεις.")
     else:
-        st.error("Παρακαλώ ανεβάστε το αρχείο ellada24 και τουλάχιστον ένα από τα amna ή thema.")
+        st.error("Παρακαλώ ανεβάστε το αρχείο ellada24_news_articles.xlsx και τουλάχιστον ένα από τα amna_articles.xlsx ή protothema_articles.xlsx.")
